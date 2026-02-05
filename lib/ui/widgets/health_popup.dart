@@ -232,11 +232,12 @@ class HealthPopup extends ConsumerWidget {
 
       if (mode == 'file') {
         try {
-          await ref.read(hostsProvider.notifier).addAuthorizedKey(host, publicKey);
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Key deployed and config updated!ników')), 
-          );
-        } catch (e) {
+                    await ref.read(hostsProvider.notifier).addAuthorizedKey(host, publicKey);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Key deployed and config updated!')),
+                    );
+                  } catch (e) {
+          
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(content: Text('Key deployed but config update failed: $e'), backgroundColor: Colors.orange),
           );
@@ -329,7 +330,7 @@ class HealthPopup extends ConsumerWidget {
     
     // Show loading
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Executing $name...ników')),
+      SnackBar(content: Text('Executing $name...')),
     );
 
     try {
