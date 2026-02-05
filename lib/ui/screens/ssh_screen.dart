@@ -1,9 +1,9 @@
 import 'dart:convert';
-import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:xterm/xterm.dart';
 import 'package:dartssh2/dartssh2.dart';
 import '../../models/host.dart';
+import '../../utils/ssh_utils.dart';
 
 class SshScreen extends StatefulWidget {
   final Host host;
@@ -30,7 +30,7 @@ class _SshScreenState extends State<SshScreen> {
     terminal.write('Connecting to ${widget.host.address}...\r\n');
     try {
       final socket = await SSHSocket.connect(widget.host.address, 22);
-      final identities = await _loadIdentities();
+      final identities = await SshUtils.loadIdentities();
       
       client = SSHClient(
         socket,
@@ -61,29 +61,6 @@ class _SshScreenState extends State<SshScreen> {
     } catch (e) {
       terminal.write('\r\nError: $e\r\n');
     }
-  }
-
-  Future<List<SSHKeyPair>> _loadIdentities() async {
-    final identities = <SSHKeyPair>[];
-    final home = Platform.environment['HOME'] ?? Platform.environment['USERPROFILE'];
-
-    if (home == null) return identities;
-
-    final keyFiles = ['id_rsa', 'id_ed25519', 'id_ecdsa'];
-
-    for (final name in keyFiles) {
-      final path = '$home/.ssh/$name';
-      final file = File(path);
-      if (await file.exists()) {
-        try {
-          final pem = await file.readAsString();
-          identities.addAll(SSHKeyPair.fromPem(pem));
-        } catch (e) {
-          // Ignore errors (e.g., encrypted keys without handled passphrase)
-        }
-      }
-    }
-    return identities;
   }
 
   @override

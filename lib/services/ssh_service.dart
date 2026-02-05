@@ -1,7 +1,7 @@
 import 'dart:convert';
-import 'dart:io';
 import 'package:dartssh2/dartssh2.dart';
 import '../models/host.dart';
+import '../utils/ssh_utils.dart';
 
 class SshService {
   Future<String> executeCommand(Host host, String command) async {
@@ -27,7 +27,7 @@ class SshService {
 
   Future<SSHClient> _connect(Host host) async {
     final socket = await SSHSocket.connect(host.address, 22, timeout: const Duration(seconds: 10));
-    final identities = await _loadIdentities();
+    final identities = await SshUtils.loadIdentities();
     
     final client = SSHClient(
       socket,
@@ -38,29 +38,5 @@ class SshService {
     
     await client.authenticated;
     return client;
-  }
-
-  Future<List<SSHKeyPair>> _loadIdentities() async {
-    final identities = <SSHKeyPair>[];
-    final home = Platform.environment['HOME'] ?? Platform.environment['USERPROFILE'];
-
-    if (home == null) return identities;
-
-    final keyFiles = ['id_rsa', 'id_ed25519', 'id_ecdsa'];
-
-    for (final name in keyFiles) {
-      final path = '$home/.ssh/$name';
-      final file = File(path);
-      if (await file.exists()) {
-        try {
-          final pem = await file.readAsString();
-          // TODO: Handle encrypted keys by prompting for passphrase
-          identities.addAll(SSHKeyPair.fromPem(pem));
-        } catch (e) {
-          print('Failed to load key $name: $e');
-        }
-      }
-    }
-    return identities;
   }
 }
