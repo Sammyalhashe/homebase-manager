@@ -42,7 +42,9 @@ class _SshScreenState extends State<SshScreen> {
       await client!.authenticated;
       terminal.write('Connected.\r\n');
 
-      final session = await client!.shell();
+      final session = await client!.shell(
+        pty: const SSHPtyConfig(width: 80, height: 24),
+      );
 
       session.stdout.listen((data) {
         terminal.write(utf8.decode(data));
