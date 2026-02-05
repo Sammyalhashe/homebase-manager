@@ -21,7 +21,10 @@ class SshService {
        throw Exception("Invalid public key format");
     }
 
-    final command = "mkdir -p ~/.ssh && echo '$publicKey' >> ~/.ssh/authorized_keys && chmod 600 ~/.ssh/authorized_keys && chmod 700 ~/.ssh";
+    // Wrap in sh -c to ensure POSIX compliance (handles &&, >>, etc.) regardless of user shell (e.g. NuShell)
+    final innerCommand = "mkdir -p ~/.ssh && echo '$publicKey' >> ~/.ssh/authorized_keys && chmod 600 ~/.ssh/authorized_keys && chmod 700 ~/.ssh";
+    final command = "sh -c '$innerCommand'";
+    
     await executeCommand(host, command);
   }
 
