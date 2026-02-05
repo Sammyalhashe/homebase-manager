@@ -1,0 +1,31 @@
+# Homebase Manager Example Configuration
+# This file can be hosted on a URL or kept locally.
+
+hosts:
+  - name: "Home Server"
+    id: "home-server" # Unique identifier (optional, defaults to name)
+    address: "192.168.1.100"
+    username: "admin"
+    # password: "securepassword" # Optional if using SSH keys
+    root_access: true # Used for sudo commands in actions
+    
+    # Custom actions that can be triggered from the app
+    actions:
+      - name: "Restart Wireguard"
+        command: "sudo systemctl restart wg-quick@wg0"
+      - name: "Clean Docker Logs"
+        command: "docker container prune -f && docker volume prune -f"
+      - name: "Update System"
+        command: "sudo apt update && sudo apt upgrade -y"
+
+    # Authorized keys for this host (updated automatically by 'Authorize Device' action)
+    authorized_keys:
+      - "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIExampleKeyYourDevice"
+
+  - name: "Cloud Gateway"
+    address: "gateway.example.com"
+    username: "ubuntu"
+    actions:
+      - name: "Restart OpenClaw"
+        command: "sudo systemctl restart openclaw-gateway"
+    authorized_keys: []
