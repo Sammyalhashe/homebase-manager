@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'package:yaml/yaml.dart';
+import 'package:yaml_edit/yaml_edit.dart';
 import '../models/host.dart';
 
 class ConfigService {
@@ -20,6 +21,49 @@ class ConfigService {
       return parseYaml(content, ageKey: ageKey);
     } else {
       throw Exception('File not found: $path');
+    }
+  }
+
+  Future<void> saveHostAuthorizedKey(String filePath, String hostId, String publicKey) async {
+    final file = File(filePath);
+    if (!await file.exists()) {
+      throw Exception('Config file not found: $filePath');
+    }
+
+    final content = await file.readAsString();
+    final doc = YamlEditor(content);
+
+    final hosts = doc.parseAt(['hosts']);
+    final hostsList = hosts.value as List;
+    
+    int index = -1;
+    for (int i = 0; i < hostsList.length; i++) {
+      final h = hostsList[i];
+      final id = h['id']?.toString() ?? h['name']?.toString();
+      if (id == hostId) {
+        index = i;
+        break;
+      }
+    }
+
+    if (index != -1) {
+       // Check if authorized_keys exists
+       final hostPath = ['hosts', index];
+       final hostMap = hostsList[index] as Map;
+       
+       if (hostMap.containsKey('authorized_keys')) {
+         final currentKeys = (hostMap['authorized_keys'] as List).cast<String>();
+         if (!currentKeys.contains(publicKey)) {
+           doc.appendToList([...hostPath, 'authorized_keys'], publicKey);
+         }
+       } else {
+         // Create the list
+         doc.update([...hostPath, 'authorized_keys'], [publicKey]);
+       }
+
+       await file.writeAsString(doc.toString());
+    } else {
+      throw Exception('Host with ID $hostId not found in config');
     }
   }
 

@@ -43,6 +43,21 @@ class HostsNotifier extends StateNotifier<List<Host>> {
     await prefs.setString('config_url', url);
     await loadHosts();
   }
+  
+  Future<void> addAuthorizedKey(Host host, String publicKey) async {
+     final prefs = await SharedPreferences.getInstance();
+     final mode = prefs.getString('config_mode');
+     final filePath = prefs.getString('config_file_path');
+
+     if (mode == 'file' && filePath != null) {
+        await _configService.saveHostAuthorizedKey(filePath, host.id, publicKey);
+        // Refresh
+        await loadHosts();
+     } else {
+       // For URL mode, we can't update the source.
+       // The UI should handle showing the user what to do.
+     }
+  }
 }
 
 final hostHealthProvider = StateProvider.family<HostHealth, String>((ref, hostId) {
