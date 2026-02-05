@@ -2,10 +2,17 @@ import 'dart:convert';
 import 'dart:io';
 
 void main(List<String> args) {
-  final version = args.isNotEmpty ? args[0] : 'nightly';
+  var version = args.isNotEmpty ? args[0] : 'nightly';
   final baseUrl = 'https://github.com/Sammyalhashe/homebase-manager/releases/download/$version';
   final zipName = 'homebase-windows.zip';
   final url = '$baseUrl/$zipName';
+
+  if (version == 'nightly') {
+    final now = DateTime.now();
+    final dateStr = "${now.year}${now.month.toString().padLeft(2, '0')}${now.day.toString().padLeft(2, '0')}";
+    // Use a version that Scoop can parse as newer
+    version = "nightly-$dateStr"; 
+  }
 
   final manifest = {
     "version": version,
