@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'package:yaml/yaml.dart';
 import 'package:yaml_edit/yaml_edit.dart';
+import 'package:path/path.dart' as p;
 import '../models/host.dart';
 
 class ConfigService {
@@ -22,6 +23,42 @@ class ConfigService {
     } else {
       throw Exception('File not found: $path');
     }
+  }
+
+  Future<String> getDefaultConfigPath() async {
+    final home = Platform.environment['HOME'] ?? Platform.environment['USERPROFILE'];
+    if (home == null) return '';
+
+    if (Platform.isLinux || Platform.isMacOS) {
+      return p.join(home, '.config', 'homebase-manager', 'config.yaml');
+    } else if (Platform.isWindows) {
+      final appData = Platform.environment['APPDATA'];
+      if (appData != null) {
+        return p.join(appData, 'homebase-manager', 'config.yaml');
+      }
+      return p.join(home, 'AppData', 'Roaming', 'homebase-manager', 'config.yaml');
+    }
+    return '';
+  }
+
+  Future<void> createDefaultConfig(String path) async {
+    final file = File(path);
+    if (!await file.parent.exists()) {
+      await file.parent.create(recursive: true);
+    }
+
+    const template = '''
+hosts:
+  - name: "Example Host"
+    address: "192.168.1.100"
+    username: "user"
+    root_access: true
+    actions:
+      - name: "Check Storage"
+        command: "df -h"
+''';
+    
+    await file.writeAsString(template);
   }
 
   Future<void> saveHostAuthorizedKey(String filePath, String hostId, String publicKey) async {

@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:file_picker/file_picker.dart';
@@ -16,21 +17,47 @@ class _ConfigScreenState extends ConsumerState<ConfigScreen> {
   final _filePathController = TextEditingController();
   final _ageKeyController = TextEditingController();
   String _configMode = 'url'; // 'url' or 'file'
+  bool _fileExists = false;
 
   @override
   void initState() {
     super.initState();
     _loadSettings();
+    _filePathController.addListener(_checkFileExists);
+  }
+
+  @override
+  void dispose() {
+    _filePathController.dispose();
+    _urlController.dispose();
+    _ageKeyController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _checkFileExists() async {
+    final exists = await File(_filePathController.text).exists();
+    if (mounted) {
+      setState(() => _fileExists = exists);
+    }
   }
 
   Future<void> _loadSettings() async {
     final prefs = await SharedPreferences.getInstance();
+    final configService = ref.read(configServiceProvider);
+    
+    var filePath = prefs.getString('config_file_path') ?? '';
+    if (filePath.isEmpty) {
+      filePath = await configService.getDefaultConfigPath();
+    }
+
     setState(() {
       _configMode = prefs.getString('config_mode') ?? 'url';
       _urlController.text = prefs.getString('config_url') ?? '';
-      _filePathController.text = prefs.getString('config_file_path') ?? '';
+      _filePathController.text = filePath;
       _ageKeyController.text = prefs.getString('age_key') ?? '';
     });
+    
+    _checkFileExists();
   }
 
   Future<void> _pickFile() async {
@@ -40,6 +67,23 @@ class _ConfigScreenState extends ConsumerState<ConfigScreen> {
       setState(() {
         _filePathController.text = result.files.single.path!;
       });
+    }
+  }
+
+  Future<void> _createDefaultConfig() async {
+    final path = _filePathController.text;
+    if (path.isEmpty) return;
+
+    try {
+      await ref.read(configServiceProvider).createDefaultConfig(path);
+      await _checkFileExists();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Created config at $path')),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error creating config: $e'), backgroundColor: Colors.red),
+      );
     }
   }
 
@@ -79,24 +123,37 @@ class _ConfigScreenState extends ConsumerState<ConfigScreen> {
                 ),
               )
             else
-              Row(
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Expanded(
-                    child: TextField(
-                      controller: _filePathController,
-                      decoration: const InputDecoration(
-                        labelText: 'Local Config File Path',
-                        hintText: '/path/to/hosts.yaml',
-                        border: OutlineInputBorder(),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: TextField(
+                          controller: _filePathController,
+                          decoration: const InputDecoration(
+                            labelText: 'Local Config File Path',
+                            hintText: '/path/to/hosts.yaml',
+                            border: OutlineInputBorder(),
+                          ),
+                        ),
                       ),
-                      readOnly: true, // Prefer picking via button
+                      const SizedBox(width: 8),
+                      IconButton.filledTonal(
+                        onPressed: _pickFile,
+                        icon: const Icon(Icons.folder_open),
+                      ),
+                    ],
+                  ),
+                  if (!_fileExists && _filePathController.text.isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 8.0),
+                      child: FilledButton.tonalIcon(
+                        onPressed: _createDefaultConfig,
+                        icon: const Icon(Icons.add),
+                        label: const Text('Create Default Config File'),
+                      ),
                     ),
-                  ),
-                  const SizedBox(width: 8),
-                  IconButton.filledTonal(
-                    onPressed: _pickFile,
-                    icon: const Icon(Icons.folder_open),
-                  ),
                 ],
               ),
             const SizedBox(height: 24),
