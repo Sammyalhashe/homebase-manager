@@ -73,7 +73,7 @@
         };
 
         packages.scoop-manifest = pkgs.writeShellScriptBin "generate-scoop" ''
-          ${pkgs.dart}/bin/dart run scripts/generate_scoop_manifest.dart "$@"
+          ${pkgs.dart}/bin/dart scripts/generate_scoop_manifest.dart "$@"
         '';
 
         devShells.default = pkgs.mkShell {
