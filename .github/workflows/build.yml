@@ -2,10 +2,13 @@ name: Build Homebase Manager
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [ "master" ]
   pull_request:
-    branches: [ "main" ]
+    branches: [ "master" ]
   workflow_dispatch:
+
+permissions:
+  contents: write
 
 jobs:
   # -----------------------------------------------------------------------------
@@ -26,11 +29,13 @@ jobs:
         run: flutter pub get
       - name: Build APK
         run: flutter build apk --release
+      - name: Rename APK
+        run: mv build/app/outputs/flutter-apk/app-release.apk homebase-android.apk
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: android-apk
-          path: build/app/outputs/flutter-apk/app-release.apk
+          path: homebase-android.apk
 
   # -----------------------------------------------------------------------------
   # LINUX BUILD
@@ -86,28 +91,49 @@ jobs:
       - name: Build Windows
         run: flutter build windows --release
 
+      - name: Compress Build
+        run: Compress-Archive -Path build/windows/x64/runner/Release/* -DestinationPath homebase-windows.zip
+
       - name: Upload Windows Build
         uses: actions/upload-artifact@v4
         with:
           name: windows-build
-          path: build/windows/x64/runner/Release
+          path: homebase-windows.zip
 
   # -----------------------------------------------------------------------------
-  # iOS BUILD (Validation Only)
+  # RELEASE
   # -----------------------------------------------------------------------------
-  # Note: To produce a valid .ipa file for installation, you must set up 
-  # Apple Signing Certificates and Provisioning Profiles in your GitHub Secrets.
-  # This job currently builds the .app bundle without signing to verify compilation.
-  build-ios:
-    runs-on: macos-latest
+  release:
+    needs: [build-android, build-linux, build-windows]
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/master'
     steps:
       - uses: actions/checkout@v4
-      - uses: subosito/flutter-action@v2
-        with:
-          channel: 'stable'
       
-      - name: Get Dependencies
-        run: flutter pub get
+      - name: Download Android Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: android-apk
+          
+      - name: Download Linux Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: linux-build
+          
+      - name: Download Windows Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: windows-build
 
-      - name: Build iOS (No Codesign)
-        run: flutter build ios --release --no-codesign
+      - name: Update Nightly Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: nightly
+          name: Nightly Build
+          body: "Latest development build from master branch."
+          draft: false
+          prerelease: true
+          files: |
+            homebase-android.apk
+            homebase-linux.tar.gz
+            homebase-windows.zip
