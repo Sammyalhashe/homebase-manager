@@ -26,18 +26,15 @@
         androidSdk = androidComposition.androidsdk;
       in
       {
-        packages.default = pkgs.stdenv.mkDerivation {
+        packages.default = pkgs.flutter.buildFlutterApplication {
           pname = "homebase-manager";
           version = "0.1.0";
           src = ./.;
 
-          nativeBuildInputs = with pkgs; [
-            cmake
-            ninja
-            pkg-config
-            clang
-            flutter
-          ];
+          pubspecLock = pkgs.lib.importJSON ./pubspec.lock.json;
+
+          # Initial dummy hash to force mismatch and get the real one
+          vendorHash = "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=";
 
           buildInputs = with pkgs; [
             gtk3
@@ -55,21 +52,6 @@
             xorg.libXdmcp
             xorg.libXtst
           ];
-
-          # Network access is required for `flutter pub get`
-          # Build with: nix build --impure
-          buildPhase = ''
-            export HOME=$(mktemp -d)
-            flutter pub get
-            flutter build linux --release
-          '';
-
-          installPhase = ''
-            mkdir -p $out/bin
-            cp -r build/linux/x64/release/bundle/* $out/bin/
-            # Rename binary if needed, or link
-            # ln -s $out/bin/homebase_manager $out/bin/homebase
-          '';
         };
 
         packages.scoop-manifest = pkgs.writeShellScriptBin "generate-scoop" ''
